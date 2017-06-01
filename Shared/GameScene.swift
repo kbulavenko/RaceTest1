@@ -13,15 +13,36 @@ import SpriteKit
     typealias SKColor = UIColor
 #endif
 
-class GameScene: SKScene {
+class GameScene: SKScene, SKPhysicsContactDelegate {
     
     
-    fileprivate var label : SKLabelNode?
-    fileprivate var spinnyNode : SKShapeNode?
+  //  fileprivate var label : SKLabelNode?
+   // fileprivate var spinnyNode : SKShapeNode?
 
+    // MARK:  - Instance variable
+    
+    
+    var   carSpeed                          : CGFloat =   0;
+    
+    let   carSpeedMax                       : CGFloat  = 250;
+    var   car                               : SKSpriteNode?
+    var   pedalIsPressedTimerIsStarted      : Bool  = false
+    var   brakePedalPressedTimerIsStarted   : Bool  = false
+ //   var   gasPedalTimerCounter              : Int  = 0
+    
+    var lastTouch: CGPoint? = nil
+    var timer  = Timer()
+    var timerBrake   = Timer()
+    var stopBackCounter  = 0;
+    let smoothnessOfTurn  :  CGFloat   = 128.0
+    var impulsePower  : CGFloat  =   0;
+    // MARK:  -  SKScene
+    
+    
     
     class func newGameScene() -> GameScene {
         // Load 'GameScene.sks' as an SKScene.
+        print("newGameScene")
         guard let scene = SKScene(fileNamed: "GameScene") as? GameScene else {
             print("Failed to load GameScene.sks")
             abort()
@@ -33,117 +54,342 @@ class GameScene: SKScene {
         return scene
     }
     
-    func setUpScene() {
-        // Get label node from scene and store it for use later
-        self.label = self.childNode(withName: "//helloLabel") as? SKLabelNode
-        if let label = self.label {
-            label.alpha = 0.0
-            label.run(SKAction.fadeIn(withDuration: 2.0))
-        }
-        
-        // Create shape node to use during mouse interaction
-        let w = (self.size.width + self.size.height) * 0.05
-        self.spinnyNode = SKShapeNode.init(rectOf: CGSize.init(width: w, height: w), cornerRadius: w * 0.3)
-        
-        if let spinnyNode = self.spinnyNode {
-            spinnyNode.lineWidth = 4.0
-            spinnyNode.run(SKAction.repeatForever(SKAction.rotate(byAngle: CGFloat(Double.pi), duration: 1)))
-            spinnyNode.run(SKAction.sequence([SKAction.wait(forDuration: 0.5),
-                                              SKAction.fadeOut(withDuration: 0.5),
-                                              SKAction.removeFromParent()]))
-            
-            #if os(watchOS)
-                // For watch we just periodically create one of these and let it spin
-                // For other platforms we let user touch/mouse events create these
-                spinnyNode.position = CGPoint(x: 0.0, y: 0.0)
-                spinnyNode.strokeColor = SKColor.red
-                self.run(SKAction.repeatForever(SKAction.sequence([SKAction.wait(forDuration: 2.0),
-                                                                   SKAction.run({
-                                                                       let n = spinnyNode.copy() as! SKShapeNode
-                                                                       self.addChild(n)
-                                                                   })])))
-            #endif
-        }
-    }
-    
-    #if os(watchOS)
-    override func sceneDidLoad() {
-        self.setUpScene()
-    }
-    #else
     override func didMove(to view: SKView) {
-        self.setUpScene()
-    }
-    #endif
-
-    func makeSpinny(at pos: CGPoint, color: SKColor) {
-        if let spinny = self.spinnyNode?.copy() as! SKShapeNode? {
-            spinny.position = pos
-            spinny.strokeColor = color
-            self.addChild(spinny)
-        }
+        print("didMove")
+        // self.setUpScene()
+        // Setup physics world's contact delegate
+        physicsWorld.contactDelegate = self
+        
+        
+        // Настрока машины
+        car  = self.childNode(withName: "car") as? SKSpriteNode
+        self.listener   = car;
+        
+        // Setup initial camera position
+        updateCamera()
+        
+        
     }
     
     override func update(_ currentTime: TimeInterval) {
         // Called before each frame is rendered
+      //  print("update")
     }
-}
 
-#if os(iOS) || os(tvOS)
-// Touch-based event handling
-extension GameScene {
-
+    // MARK: Touch Handling
+    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if let label = self.label {
-            label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
-        }
-        
-        for t in touches {
-            self.makeSpinny(at: t.location(in: self), color: SKColor.green)
+      //  print("touchesBegan")
+        for touch in touches{
+            let location = touch.location(in: self)
+            let touchNode = atPoint(location)
+            print("\(String(describing: touchNode.name))")
+
+            if touchNode.name == "leftArrow" {
+                print("leftArrow Pressed")
+                if(carSpeed >= 2)  {
+                    print("\(String(describing: car?.physicsBody))")
+                    
+                   // self.makeForce(impulse: impulsePower * 5 , dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+                    
+                    
+                    
+                    car?.zRotation   +=  CGFloat.pi / smoothnessOfTurn
+                    camera?.zRotation +=  CGFloat.pi / smoothnessOfTurn
+                    
+                 //   self.makeForce(impulse: impulsePower * 2 , dxRotation: CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+                    
+
+                }
+                
+            }
+            
+            
+            if touchNode.name == "rightArrow" {
+                print("rightArrow Pressed")
+                if(carSpeed >= 2)  {
+                    
+                    car?.zRotation   -=  CGFloat.pi / smoothnessOfTurn
+                    camera?.zRotation -=  CGFloat.pi / smoothnessOfTurn
+                }
+                
+            }
+            
+            
+            if touchNode.name == "brakePedal"{
+                //write your logic here
+                
+                print("Brake pedal pressed")
+                if(carSpeed >= 1 )  {
+                    // carSpeed     *= 1.1
+                    
+                    
+                    if(!brakePedalPressedTimerIsStarted )   {
+                        timerBrake   = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.brakePedalPressed), userInfo: nil, repeats: true)
+                        brakePedalPressedTimerIsStarted   = true;
+                    }
+                    
+                    
+                }
+            }
+            else   if touchNode.name == "pedal"{
+                //write your logic here
+               
+                print("Gas pedal is pressed")
+                
+                
+                
+                
+                //if(carSpeed < carSpeedMax && carSpeed != 0)  {
+                   // carSpeed     *= 1.1
+                    if(!pedalIsPressedTimerIsStarted )   {
+                        timer   = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.pedalPressed), userInfo: nil, repeats: true)
+                        pedalIsPressedTimerIsStarted   = true;
+                    }
+                    
+                    
+//                }
+//                else if(carSpeed  == 0)  {
+//                    carSpeed   = 2.0;
+//                    if(!pedalIsPressedTimerIsStarted )   {
+//                        timer   = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.pedalPressed), userInfo: nil, repeats: true)
+//                        pedalIsPressedTimerIsStarted   = true;
+//                    }
+
+                    
+                //}
+                
+            }
+          //  print("carSpeed  = \(carSpeed)")
+         //   print("velocity  = \(String(describing: car?.physicsBody?.velocity))")
+         //   print("position = \(String(describing: car?.position))")
         }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches {
-            self.makeSpinny(at: t.location(in: self), color: SKColor.blue)
-        }
+        print("touchesMoved")
+       // handleTouches(touches)
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches {
-            self.makeSpinny(at: t.location(in: self), color: SKColor.red)
+        print("touchesEnded")
+       // handleTouches(touches)
+        
+        timer.invalidate()
+        pedalIsPressedTimerIsStarted   = false;
+        timerBrake.invalidate()
+        brakePedalPressedTimerIsStarted = false;
+        car?.physicsBody?.friction = 0.2;
+        
+        print("carSpeed  = \(carSpeed)")
+        
+      //  print("\(String(describing: car?.physicsBody?.velocity))")
+        print("velocity = \(String(describing: car?.physicsBody?.velocity))")
+        print("position =\(String(describing: car?.position))")
+
+        
+    }
+    
+    // MARK - Updates
+    
+    override func didSimulatePhysics() {
+      //  print("didSimulatePhysics")
+        if let _ = car {
+            updateCar()
+          //  updateZombies()
         }
     }
     
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches {
-            self.makeSpinny(at: t.location(in: self), color: SKColor.red)
+//    // Determines if the car's position should be updated
+//    fileprivate func shouldMove(currentPosition: CGPoint, touchPosition: CGPoint) -> Bool {
+//     //   print("shouldMove")
+//        
+//        return true
+//            //abs(currentPosition.x - touchPosition.x) > car!.frame.width / 2 ||
+//           // abs(currentPosition.y - touchPosition.y) > car!.frame.height/2
+//    }
+//
+    
+    
+    // Updates the car's position by moving towards the last touch made
+    func updateCar() {
+     //   print("updateCar")
+        
+        
+      //  if(pedalIsPressedTimerIsStarted &&  !brakePedalPressedTimerIsStarted)
+   //     {
+        
+        
+      //  self.makeForce(impulse: 0.00 +  0.004 * log(carSpeed + 1) , dxRotation: CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+//        if(!brakePedalPressedTimerIsStarted)
+//        {
+//            self.makeForce(impulse: 0.00 +  800 * log(carSpeed + 1) , dxRotation: CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+//        }
+        
+//        // Specify the force to apply to the SKPhysicsBody
+//      //  let r  : CGFloat = 0.00 +  0.004 * log(carSpeed + 1)
+//        
+//        let r  : CGFloat = 0.00 +  0.4 * log(carSpeed + 1)
+//        forcePower  = r;
+//        print("forcePower  = \(forcePower)")
+//        // Create a vector in the direction the sprite is facing
+//        let dx : CGFloat = r * cos (car!.zRotation + CGFloat.pi / 2.0);
+//        let dy : CGFloat = r * sin (car!.zRotation + CGFloat.pi / 2.0);
+//        
+//        // Apply impulse to physics body
+//       // car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
+//        car!.physicsBody?.applyForce(CGVector(dx: dx, dy: dy))
+//        
+     //   }
+//        if(brakePedalPressedTimerIsStarted)    {
+//            // Specify the force to apply to the SKPhysicsBody
+//            let r  : CGFloat =  0.0015
+//            
+//            // Create a vector in the direction the sprite is facing
+//            let dx : CGFloat = r * cos (car!.zRotation + CGFloat.pi / 2.0);
+//            let dy : CGFloat = r * sin (car!.zRotation - CGFloat.pi / 2.0);
+//            
+//            // Apply impulse to physics body
+//            car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
+//            //car!.physicsBody?.
+//        }
+        
+         updateCamera();
+        if car?.physicsBody?.isResting   == true  {
+             car?.physicsBody?.isResting   = false
         }
+        
+    }
+ 
+    func updateCamera() {
+       // print("updateCamera")
+        if let camera = camera {
+            camera.position = CGPoint(x: car!.position.x, y: car!.position.y)
+           // camera.zRotation  = (car?.zRotation)!
+            
+        }
+        
+        
+        car?.physicsBody?.linearDamping   =  0.01 + 0.1 * carSpeed / carSpeedMax
+        print("carSpeed  = \(carSpeed)")
+        
+        //  print("\(String(describing: car?.physicsBody?.velocity))")
+     //   print("Velocity = \(String(describing: car?.physicsBody?.velocity))")
+     //   print("Position = \(String(describing: car?.position))")
+
+    }
+
+      func   pedalPressed  () -> Void {
+        print("Gas pedal pressed")
+       // if(carSpeed * 1.1 > carSpeedMax) {
+          //  timer.invalidate()
+         //   pedalIsPressedTimerIsStarted   = false;
+        //    return
+      //  }
+     //   gasPedalTimerCounter   += 1;
+        if(carSpeed * 1.1 < carSpeedMax) {
+            carSpeed   *= 1.1
+        }
+        if(!brakePedalPressedTimerIsStarted)
+        {
+            self.makeForce(impulse: 0.00 +  800 * carSpeed  , dxRotation: CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+        }
+        
+        
+        
+        if(carSpeed == 0) {
+            carSpeed  = 2.0
+        }
+
+        
+        // updateCamera();
+    }
+
+    
+    func   brakePedalPressed  () -> Void {
+        print("brakePedalPressed")
+        if(carSpeed / 1.1 < 2) {
+            carSpeed   = 0
+            car?.physicsBody?.isResting   = true;
+            timer.invalidate()
+            brakePedalPressedTimerIsStarted   = false;
+            
+            return
+        }
+        car?.physicsBody?.friction   = 1.0;
+      //  gasPedalTimerCounter   += 1;
+        carSpeed   /= 1.1;
+        
+        
+        
+        
+        print("takeImpulse back")
+        
+      //  self.makeForce(impulse: 0.045  + 0.0015 * carSpeed, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+         self.makeForce(impulse: 600.0  + 30000.0 * carSpeed / carSpeedMax, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+        
+//        // Specify the force to apply to the SKPhysicsBody
+////        let r  : CGFloat =  0.045  + 0.0015 * carSpeed
+//
+//        let r  : CGFloat =  0.45  + 0.15 * carSpeed
+//        forcePower  = r;
+//        print("forcePower  = \(forcePower)")
+//        // Create a vector in the direction the sprite is facing
+//        let dx : CGFloat = r * cos (car!.zRotation - CGFloat.pi / 2.0);
+//        let dy : CGFloat = r * sin (car!.zRotation + CGFloat.pi / 2.0);
+//
+//        // Apply impulse to physics body
+//       // car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
+//         car!.physicsBody?.applyForce(CGVector(dx: dx, dy: dy))
+//        //car!.physicsBody?.
+//
+//       
+//        //updateCar()
+//      //  updateCamera()
+        
+        
+        
+    }
+
+    
+    func makeForce(impulse:   CGFloat ,dxRotation: CGFloat, dyRotation: CGFloat) -> Void {
+        print("makeForce with impulse : \(impulse), dx = \(dxRotation), dy = \(dyRotation)")
+        // Specify the force to apply to the SKPhysicsBody
+        //        let r  : CGFloat =  0.045  + 0.0015 * carSpeed
+     //   var   r   : CGFloat    = 0 ;
+        
+//        if(dxRotation < 0) {
+//        
+//            //let r  : CGFloat =  0.045  + 0.0015 * carSpeed
+//            //
+//            //        let r  : CGFloat =  0.45  + 0.15 * carSpeed
+//            
+//            r  =  0.045  + 0.0015 * carSpeed        }
+//        else {
+//            
+//            //      //  let r  : CGFloat = 0.00 +  0.004 * log(carSpeed + 1)
+//            //
+//            //        let r  : CGFloat = 0.00 +  0.4 * log(carSpeed + 1)
+//
+//            
+//            r   = 0.00 +  0.004 * log(carSpeed + 1)
+//
+//
+//        }
+        impulsePower  = impulse;
+        print("impulsePower  = \(impulsePower)")
+        // Create a vector in the direction the sprite is facing
+        let dx : CGFloat = impulse * cos (car!.zRotation + dxRotation);
+        let dy : CGFloat = impulse * sin (car!.zRotation + dyRotation);
+        
+        // Apply impulse to physics body
+        // car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
+        car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
+        
+        
+        
     }
     
-   
+    
+
 }
-#endif
-
-#if os(OSX)
-// Mouse-based event handling
-extension GameScene {
-
-    override func mouseDown(with event: NSEvent) {
-        if let label = self.label {
-            label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
-        }
-        self.makeSpinny(at: event.location(in: self), color: SKColor.green)
-    }
-    
-    override func mouseDragged(with event: NSEvent) {
-        self.makeSpinny(at: event.location(in: self), color: SKColor.blue)
-    }
-    
-    override func mouseUp(with event: NSEvent) {
-        self.makeSpinny(at: event.location(in: self), color: SKColor.red)
-    }
-
-}
-#endif
-
