@@ -22,22 +22,33 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     // MARK:  - Instance variable
     
     
-    var   carSpeed                          : CGFloat =   0;
-    
-    let   carSpeedMax                       : CGFloat  = 250;
     var   car                               : SKSpriteNode?
-    var   pedalIsPressedTimerIsStarted      : Bool  = false
-    var   brakePedalPressedTimerIsStarted   : Bool  = false
- //   var   gasPedalTimerCounter              : Int  = 0
     
-    var lastTouch: CGPoint? = nil
-    var timer  = Timer()
-    var timerBrake   = Timer()
-    var stopBackCounter  = 0;
-    let smoothnessOfTurn  :  CGFloat   = 128.0
-    var impulsePower  : CGFloat  =   0;
+    
+    var   carSpeed                          : CGFloat   =   0;
+    let   carSpeedMax                       : CGFloat   = 250;
+    var   pedalIsPressedTimerIsStarted      : Bool      = false
+    var   brakePedalPressedTimerIsStarted   : Bool      = false
+    
+    var   turnLeftPressedTimerIsStarted     : Bool      = false
+    var   turnRightPressedTimerIsStarted    : Bool      = false
+    
+    
+    let   turnStepAngle                     : CGFloat   =   CGFloat.pi / 720.0
+
+    
+    //   var   gasPedalTimerCounter              : Int  = 0
+    
+    var lastTouch                           : CGPoint?  = nil
+    var timer                               : Timer     = Timer()
+    var timerBrake                          : Timer     = Timer()
+    var timerTurnLeft                       : Timer     = Timer()
+    var timerTurnRight                      : Timer     = Timer()
+    
+  //  var stopBackCounter  = 0;
+    let smoothnessOfTurn                    :  CGFloat  = 128.0
+    var impulsePower                        : CGFloat   =   0;
     // MARK:  -  SKScene
-    
     
     
     class func newGameScene() -> GameScene {
@@ -85,36 +96,43 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             let touchNode = atPoint(location)
             print("\(String(describing: touchNode.name))")
 
+            
+            // MARK: Turn LEFT
+            
             if touchNode.name == "leftArrow" {
                 print("leftArrow Pressed")
-                if(carSpeed >= 2)  {
-                    print("\(String(describing: car?.physicsBody))")
-                    
-                   // self.makeForce(impulse: impulsePower * 5 , dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
-                    
-                    
-                    
-                    car?.zRotation   +=  CGFloat.pi / smoothnessOfTurn
-                    camera?.zRotation +=  CGFloat.pi / smoothnessOfTurn
-                    
-                 //   self.makeForce(impulse: impulsePower * 2 , dxRotation: CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
-                    
-
+                if(carSpeed > 1 )  {
+                    if(!turnLeftPressedTimerIsStarted )   {
+                        timerTurnLeft   = Timer.scheduledTimer(timeInterval: 0.02,
+                                                                target: self,
+                                                                selector: #selector(self.turnLeftPressed),
+                                                                userInfo: nil,
+                                                                repeats: true)
+                        turnLeftPressedTimerIsStarted   = true;
+                    }
                 }
                 
             }
             
+            // MARK: Turn RIGHT
             
             if touchNode.name == "rightArrow" {
                 print("rightArrow Pressed")
-                if(carSpeed >= 2)  {
-                    
-                    car?.zRotation   -=  CGFloat.pi / smoothnessOfTurn
-                    camera?.zRotation -=  CGFloat.pi / smoothnessOfTurn
-                }
                 
+                if(carSpeed > 1 )  {
+                    if(!turnRightPressedTimerIsStarted )   {
+                        timerTurnRight   = Timer.scheduledTimer(timeInterval: 0.02,
+                                                                target: self,
+                                                                selector: #selector(self.turnRightPressed),
+                                                                userInfo: nil,
+                                                                repeats: true)
+                        turnRightPressedTimerIsStarted   = true;
+                    }
+                }
             }
             
+            
+            // MARK: BRAKE Pedal
             
             if touchNode.name == "brakePedal"{
                 //write your logic here
@@ -125,20 +143,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                     
                     
                     if(!brakePedalPressedTimerIsStarted )   {
-                        timerBrake   = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.brakePedalPressed), userInfo: nil, repeats: true)
+                        timerBrake   = Timer.scheduledTimer(timeInterval: 0.1,
+                                                            target: self,
+                                                            selector: #selector(self.brakePedalPressed),
+                                                            userInfo: nil,
+                                                            repeats: true)
                         brakePedalPressedTimerIsStarted   = true;
                     }
-                    
-                    
                 }
-            }
+            }  // MARK: GAS Pedal
             else   if touchNode.name == "pedal"{
                 //write your logic here
-               
                 print("Gas pedal is pressed")
-                
-                
-                
                 
                 //if(carSpeed < carSpeedMax && carSpeed != 0)  {
                    // carSpeed     *= 1.1
@@ -148,21 +164,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                     }
                     
                     
-//                }
-//                else if(carSpeed  == 0)  {
-//                    carSpeed   = 2.0;
-//                    if(!pedalIsPressedTimerIsStarted )   {
-//                        timer   = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(self.pedalPressed), userInfo: nil, repeats: true)
-//                        pedalIsPressedTimerIsStarted   = true;
-//                    }
-
-                    
-                //}
                 
             }
-          //  print("carSpeed  = \(carSpeed)")
-         //   print("velocity  = \(String(describing: car?.physicsBody?.velocity))")
-         //   print("position = \(String(describing: car?.position))")
         }
     }
     
@@ -179,6 +182,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         pedalIsPressedTimerIsStarted   = false;
         timerBrake.invalidate()
         brakePedalPressedTimerIsStarted = false;
+        
+        timerTurnRight.invalidate()
+        turnRightPressedTimerIsStarted = false;
+        timerTurnLeft.invalidate()
+        turnLeftPressedTimerIsStarted = false;
+        
         car?.physicsBody?.friction = 0.0; // 0.2
         
         print("carSpeed  = \(carSpeed)")
@@ -255,15 +264,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 //        }
         
          updateCamera();
-        if car?.physicsBody?.isResting   == true  {
+      //  if car?.physicsBody?.isResting   == true  {
              car?.physicsBody?.isResting   = false
-        }
+      //  }
         
     }
  
     func updateCamera() {
         
-        let speed  = sqrt(Double(  pow((car?.physicsBody?.velocity.dx)! - 0*(car?.position.x)!, 2.0) +  pow((car?.physicsBody?.velocity.dy)! - 0*(car?.position.y)!, 2.0)))
+        let speed   = self.getCarSpeed()
+            //= sqrt(Double(  pow((car?.physicsBody?.velocity.dx)! - 0*(car?.position.x)!, 2.0) +  pow((car?.physicsBody?.velocity.dy)! - 0*(car?.position.y)!, 2.0)))
         print("updateCamera  speed  = \(speed)")
         print("dx =\(String(describing: car?.physicsBody?.velocity.dy))  dy = \(String(describing: car?.physicsBody?.velocity.dy))")
         
@@ -283,7 +293,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         print("carSpeed  = \(carSpeed)")
         
         //  print("\(String(describing: car?.physicsBody?.velocity))")
-     //   print("Velocity = \(String(describing: car?.physicsBody?.velocity))")
+        print("Velocity = \(String(describing: car?.physicsBody?.velocity))")
      //   print("Position = \(String(describing: car?.position))")
 
     }
@@ -320,7 +330,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if(carSpeed / 1.1 < 2) {
             carSpeed   = 0
             car?.physicsBody?.isResting   = true;
-            timer.invalidate()
+            timerBrake.invalidate()
             brakePedalPressedTimerIsStarted   = false;
           // car?.physicsBody?.friction   = 0.0;  //0.0
             return
@@ -335,7 +345,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         print("takeImpulse back")
         
       //  self.makeForce(impulse: 0.045  + 0.0015 * carSpeed, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
-         self.makeForce(impulse: 600.0  + 35000.0 * carSpeed / carSpeedMax, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+         self.makeForce(impulse: 600.0  + 30000.0 * carSpeed / carSpeedMax, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
         
 //        // Specify the force to apply to the SKPhysicsBody
 ////        let r  : CGFloat =  0.045  + 0.0015 * carSpeed
@@ -385,22 +395,115 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 //
 //
 //        }
-        impulsePower  = impulse;
-        print("impulsePower  = \(impulsePower)")
-        // Create a vector in the direction the sprite is facing
-        let dx : CGFloat = impulse * cos (car!.zRotation + dxRotation);
-        let dy : CGFloat = impulse * sin (car!.zRotation + dyRotation);
+
         
-        // Apply impulse to physics body
-        // car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
-        car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
+        
+//        impulsePower  = impulse;
+//        print("impulsePower  = \(impulsePower)")
+//        // Create a vector in the direction the sprite is facing
+//        let dx : CGFloat = impulse * cos (car!.zRotation + dxRotation);
+//        let dy : CGFloat = impulse * sin (car!.zRotation + dyRotation);
+//        
+//        // Apply impulse to physics body
+//        // car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
+//        car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
+        
+        
+        
+        
     }
 
     
-    func turnLeft() -> Void {
-        
+    
+    
+    
+    
+    func turnCarLeft() -> Void {
+        turnCar(angle: turnStepAngle)
     }
     
+    func turnCarRight() -> Void {
+        turnCar(angle: -turnStepAngle)
+    }
+    
+    
+    func turnCar(angle: CGFloat ) -> Void {
+        let    rotation   = angle  * log( carSpeed + 1 ) * 4.0  / log( carSpeedMax + 1)
+        car?.zRotation      += rotation
+        camera?.zRotation   += rotation
+        
+        
+        
+        
+        
+        
+        let  dx1  : CGFloat    =   CGFloat( (car?.physicsBody?.velocity.dx.native)!)
+        let  dy1  : CGFloat    =   CGFloat( (car?.physicsBody?.velocity.dy.native)!)
+        
+        
+        
+        let  angleVelocity   : CGFloat   = atan2(dy1, dx1)
+        
+        let  newAngleVelocity  : CGFloat =  angleVelocity  + rotation
+        
+        
+        let velocitySpeed   =  self.getCarSpeed()
+        
+        let   dx   : CGFloat   = velocitySpeed * cos(newAngleVelocity)
+        let   dy   : CGFloat   =  velocitySpeed * sin(newAngleVelocity)
+        let   stringForVector  : String =  String(format: "%f,%f", dx, dy)
+        print("stringForVector = \(stringForVector)")
+        car?.physicsBody?.velocity  = CGVector.init(dx: dx, dy: dy)
+    }
+    
+    
+    
+    
+    
+    func  getCarSpeed() -> CGFloat {
+         return sqrt(pow((car?.physicsBody?.velocity.dx)! - 0*(car?.position.x)!, 2.0) +  pow((car?.physicsBody?.velocity.dy)! - 0*(car?.position.y)!, 2.0))
+    }
+    
+    
+    
+    
+    func   turnLeftPressed  () -> Void {
+        print("turnLeftPressed")
+        if(carSpeed <= 1 || self.getCarSpeed()  < 5.0) {
+            timerTurnLeft.invalidate()
+            turnLeftPressedTimerIsStarted   = false;
+            return
+        }
+       // car?.physicsBody?.friction   = 1.0;  //1.0
+      //  carSpeed   /= 1.1;
+        print("take Rotate Turn Left")
+        
+        
+        self.turnCarLeft()
+        //self.makeForce(impulse: 600.0  + 35000.0 * carSpeed / carSpeedMax, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+        
+    }
+
+    func   turnRightPressed  () -> Void {
+        print("turnRightPressed")
+        if(carSpeed  <= 1 || self.getCarSpeed()  < 5.0) {
+            timerTurnRight.invalidate()
+            turnLeftPressedTimerIsStarted   = false;
+            return
+        }
+        // car?.physicsBody?.friction   = 1.0;  //1.0
+        //  carSpeed   /= 1.1;
+        print("take Rotate Turn Right")
+        
+        
+        self.turnCarRight()
+        //self.makeForce(impulse: 600.0  + 35000.0 * carSpeed / carSpeedMax, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+        
+    }
+
+    func carGas() -> Void {
+        
+    }
     
 
 }
