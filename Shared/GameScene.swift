@@ -179,7 +179,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         pedalIsPressedTimerIsStarted   = false;
         timerBrake.invalidate()
         brakePedalPressedTimerIsStarted = false;
-        car?.physicsBody?.friction = 0.2;
+        car?.physicsBody?.friction = 0.0; // 0.2
         
         print("carSpeed  = \(carSpeed)")
         
@@ -262,7 +262,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
  
     func updateCamera() {
-       // print("updateCamera")
+        
+        let speed  = sqrt(Double(  pow((car?.physicsBody?.velocity.dx)! - 0*(car?.position.x)!, 2.0) +  pow((car?.physicsBody?.velocity.dy)! - 0*(car?.position.y)!, 2.0)))
+        print("updateCamera  speed  = \(speed)")
+        print("dx =\(String(describing: car?.physicsBody?.velocity.dy))  dy = \(String(describing: car?.physicsBody?.velocity.dy))")
+        
+        let velocityAngle   = atan2((car?.physicsBody?.velocity.dy)!, (car?.physicsBody?.velocity.dx)!)
+        
+        print("velocityAngle = \(velocityAngle)")
+        print("zRotation = \(String(describing: car?.zRotation))")
+        
         if let camera = camera {
             camera.position = CGPoint(x: car!.position.x, y: car!.position.y)
            // camera.zRotation  = (car?.zRotation)!
@@ -270,7 +279,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         
         
-        car?.physicsBody?.linearDamping   =  0.01 + 0.1 * carSpeed / carSpeedMax
+        car?.physicsBody?.linearDamping   =  0.0 + 0.02 * carSpeed / carSpeedMax
         print("carSpeed  = \(carSpeed)")
         
         //  print("\(String(describing: car?.physicsBody?.velocity))")
@@ -313,10 +322,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             car?.physicsBody?.isResting   = true;
             timer.invalidate()
             brakePedalPressedTimerIsStarted   = false;
-            
+          // car?.physicsBody?.friction   = 0.0;  //0.0
             return
         }
-        car?.physicsBody?.friction   = 1.0;
+        car?.physicsBody?.friction   = 1.0;  //1.0
       //  gasPedalTimerCounter   += 1;
         carSpeed   /= 1.1;
         
@@ -326,7 +335,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         print("takeImpulse back")
         
       //  self.makeForce(impulse: 0.045  + 0.0015 * carSpeed, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
-         self.makeForce(impulse: 600.0  + 30000.0 * carSpeed / carSpeedMax, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+         self.makeForce(impulse: 600.0  + 35000.0 * carSpeed / carSpeedMax, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
         
 //        // Specify the force to apply to the SKPhysicsBody
 ////        let r  : CGFloat =  0.045  + 0.0015 * carSpeed
@@ -385,8 +394,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         // Apply impulse to physics body
         // car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
         car!.physicsBody?.applyImpulse(CGVector(dx: dx, dy: dy))
-        
-        
+    }
+
+    
+    func turnLeft() -> Void {
         
     }
     
