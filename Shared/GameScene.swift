@@ -25,8 +25,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var   car                               : SKSpriteNode?
     
     
-    var   carSpeed                          : CGFloat   =   0;
-    let   carSpeedMax                       : CGFloat   = 250;
+  //  var   carSpeed                          : CGFloat   =   0;
+//    let   carSpeedMax                       : CGFloat   = 250;
+    let    maxVelocitySpeed                 : CGFloat   = 1500;
     var   pedalIsPressedTimerIsStarted      : Bool      = false
     var   brakePedalPressedTimerIsStarted   : Bool      = false
     
@@ -101,7 +102,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             
             if touchNode.name == "leftArrow" {
                 print("leftArrow Pressed")
-                if(carSpeed > 1 )  {
+                if( self.getCarSpeed() > 1 )  {
                     if(!turnLeftPressedTimerIsStarted )   {
                         timerTurnLeft   = Timer.scheduledTimer(timeInterval: 0.02,
                                                                 target: self,
@@ -119,7 +120,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             if touchNode.name == "rightArrow" {
                 print("rightArrow Pressed")
                 
-                if(carSpeed > 1 )  {
+                if(self.getCarSpeed() > 1 )  {
                     if(!turnRightPressedTimerIsStarted )   {
                         timerTurnRight   = Timer.scheduledTimer(timeInterval: 0.02,
                                                                 target: self,
@@ -138,7 +139,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 //write your logic here
                 
                 print("Brake pedal pressed")
-                if(carSpeed >= 1 )  {
+                if(self.getCarSpeed() >= 1 )  {
                     // carSpeed     *= 1.1
                     
                     
@@ -190,7 +191,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         car?.physicsBody?.friction = 0.0; // 0.2
         
-        print("carSpeed  = \(carSpeed)")
+        print("self.getCarSpeed()  = \(self.getCarSpeed())")
         
       //  print("\(String(describing: car?.physicsBody?.velocity))")
         print("velocity = \(String(describing: car?.physicsBody?.velocity))")
@@ -289,8 +290,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         
         
-        car?.physicsBody?.linearDamping   =  0.0 + 0.02 * carSpeed / carSpeedMax
-        print("carSpeed  = \(carSpeed)")
+        car?.physicsBody?.linearDamping   =  0.0 + 0.02 * self.getCarSpeed() / maxVelocitySpeed
+        print("self.getCarSpeed()  = \(self.getCarSpeed())")
         
         //  print("\(String(describing: car?.physicsBody?.velocity))")
         print("Velocity = \(String(describing: car?.physicsBody?.velocity))")
@@ -306,18 +307,25 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         //    return
       //  }
      //   gasPedalTimerCounter   += 1;
-        if(carSpeed * 1.1 < carSpeedMax) {
-            carSpeed   *= 1.1
+        if(self.getCarSpeed() < maxVelocitySpeed) {
+          //  carSpeed   *= 1.1
+        
+            if(!brakePedalPressedTimerIsStarted)
+            {
+              // self.makeForce(impulse: 0.00 +  800 * carSpeed  , dxRotation: CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+                // Заменить метод
+                self.correctVelocity(correction: 1.1)
+                
+                
+            }
         }
-        if(!brakePedalPressedTimerIsStarted)
-        {
-            self.makeForce(impulse: 0.00 +  800 * carSpeed  , dxRotation: CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
-        }
         
         
         
-        if(carSpeed == 0) {
-            carSpeed  = 2.0
+        if(self.getCarSpeed() < 0.1) {
+            //carSpeed  = 2.0
+            self.setVelocityForMove()
+            // Вызвать метод ускорения  или заданрия velocity
         }
 
         
@@ -327,8 +335,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func   brakePedalPressed  () -> Void {
         print("brakePedalPressed")
-        if(carSpeed / 1.1 < 2) {
-            carSpeed   = 0
+        if(self.getCarSpeed()  < 1) {
+            //carSpeed   = 0
+           self.setVelocityForStop()
+            // Задать нулевой Velocity
+            
             car?.physicsBody?.isResting   = true;
             timerBrake.invalidate()
             brakePedalPressedTimerIsStarted   = false;
@@ -337,15 +348,23 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         car?.physicsBody?.friction   = 1.0;  //1.0
       //  gasPedalTimerCounter   += 1;
-        carSpeed   /= 1.1;
+      //  carSpeed   /= 1.1;
         
+       self.correctVelocity(correction: 0.8)
+        
+       //  Вызвать метод чтобу уменьшить Velocity
         
         
         
         print("takeImpulse back")
         
       //  self.makeForce(impulse: 0.045  + 0.0015 * carSpeed, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
-         self.makeForce(impulse: 600.0  + 30000.0 * carSpeed / carSpeedMax, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+      
+        //это пока можно закомментить
+      //  self.makeForce(impulse: 600.0  + 30000.0 * carSpeed / carSpeedMax, dxRotation: -CGFloat.pi / 2.0, dyRotation: CGFloat.pi / 2.0)
+        
+      
+        
         
 //        // Specify the force to apply to the SKPhysicsBody
 ////        let r  : CGFloat =  0.045  + 0.0015 * carSpeed
@@ -365,11 +384,75 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 //       
 //        //updateCar()
 //      //  updateCamera()
-        
-        
+    }
+    
+    
+    
+    func setVelocityForStop() -> Void {
+        //        let  dx1  : CGFloat    =   0.1
+        //        let  dy1  : CGFloat    =   0.1
+//        
+//        let  angleVelocity   : CGFloat   =  CGFloat.pi
+//        //atan2(dy1, dx1)
+//        //
+//        //        let  newAngleVelocity  : CGFloat =  angleVelocity  + rotation
+//        
+//        
+//        let velocitySpeed  : CGFloat  =  0.0
+//        // self.getCarSpeed()
+//        
+//        let   dx   : CGFloat   =  velocitySpeed    *  cos(angleVelocity)
+//        let   dy   : CGFloat   =  velocitySpeed    *  sin(angleVelocity)
+//        let   stringForVector  : String =  String(format: "%f,%f", dx, dy)
+//        print("stringForVector = \(stringForVector)")
+        car?.physicsBody?.velocity  = CGVector.init(dx: 0.0, dy: 0.0)
         
     }
 
+    
+    
+    func setVelocityForMove() -> Void {
+//        let  dx1  : CGFloat    =   0.1
+//        let  dy1  : CGFloat    =   0.1
+        
+        let  angleVelocity   : CGFloat   =   CGFloat.pi / 2.0  + (self.camera?.zRotation)!
+            //atan2(dy1, dx1)
+        //
+        //        let  newAngleVelocity  : CGFloat =  angleVelocity  + rotation
+        
+        
+        let velocitySpeed  : CGFloat  =  0.5
+           // self.getCarSpeed()
+        
+        let   dx   : CGFloat   =  velocitySpeed    *  cos(angleVelocity)
+        let   dy   : CGFloat   =  velocitySpeed    *  sin(angleVelocity)
+        let   stringForVector  : String =  String(format: "%f,%f", dx, dy)
+        print("stringForVector = \(stringForVector)")
+        car?.physicsBody?.velocity  = CGVector.init(dx: dx, dy: dy)
+
+    }
+    
+    
+    func correctVelocity(correction: CGFloat) -> Void {
+        let  dx1  : CGFloat    =   CGFloat( (car?.physicsBody?.velocity.dx.native)!)
+        let  dy1  : CGFloat    =   CGFloat( (car?.physicsBody?.velocity.dy.native)!)
+        
+        let  angleVelocity   : CGFloat   = atan2(dy1, dx1)
+//        
+//        let  newAngleVelocity  : CGFloat =  angleVelocity  + rotation
+        
+        
+        let velocitySpeed   =  self.getCarSpeed()
+        
+        let   dx   : CGFloat   =  velocitySpeed  * correction   *  cos(angleVelocity)
+        let   dy   : CGFloat   =  velocitySpeed  * correction   *  sin(angleVelocity)
+        let   stringForVector  : String =  String(format: "%f,%f", dx, dy)
+        print("stringForVector = \(stringForVector)")
+        car?.physicsBody?.velocity  = CGVector.init(dx: dx, dy: dy)
+    }
+    
+    
+/*
     
     func makeForce(impulse:   CGFloat ,dxRotation: CGFloat, dyRotation: CGFloat) -> Void {
         print("makeForce with impulse : \(impulse), dx = \(dxRotation), dy = \(dyRotation)")
@@ -414,9 +497,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     
-    
-    
-    
+    */
     
     func turnCarLeft() -> Void {
         turnCar(angle: turnStepAngle)
@@ -428,10 +509,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     
     func turnCar(angle: CGFloat ) -> Void {
-        let    rotation   = angle  * log( carSpeed + 1 ) * 4.0  / log( carSpeedMax + 1)
-        car?.zRotation      += rotation
-        camera?.zRotation   += rotation
-        
+        let    rotation   = angle  * log( self.getCarSpeed() + 1 ) * 4.0  / log( maxVelocitySpeed + 1)
         
         
         
@@ -449,11 +527,16 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         let velocitySpeed   =  self.getCarSpeed()
         
-        let   dx   : CGFloat   = velocitySpeed * cos(newAngleVelocity)
-        let   dy   : CGFloat   =  velocitySpeed * sin(newAngleVelocity)
+        let   dx   : CGFloat   = velocitySpeed * cos(newAngleVelocity )
+        let   dy   : CGFloat   =  velocitySpeed * sin(newAngleVelocity )
         let   stringForVector  : String =  String(format: "%f,%f", dx, dy)
         print("stringForVector = \(stringForVector)")
         car?.physicsBody?.velocity  = CGVector.init(dx: dx, dy: dy)
+        
+        car?.zRotation      += rotation
+        camera?.zRotation   += rotation
+        
+
     }
     
     
@@ -469,7 +552,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func   turnLeftPressed  () -> Void {
         print("turnLeftPressed")
-        if(carSpeed <= 1 || self.getCarSpeed()  < 5.0) {
+        if(self.getCarSpeed() < 2.0) {
             timerTurnLeft.invalidate()
             turnLeftPressedTimerIsStarted   = false;
             return
@@ -486,7 +569,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
     func   turnRightPressed  () -> Void {
         print("turnRightPressed")
-        if(carSpeed  <= 1 || self.getCarSpeed()  < 5.0) {
+        if( self.getCarSpeed()  < 2.0) {
             timerTurnRight.invalidate()
             turnLeftPressedTimerIsStarted   = false;
             return
